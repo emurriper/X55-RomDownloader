@@ -1,0 +1,14 @@
+<!-- X55-ROM-DOWNLOADER-MENU: solo datos de esta sección, sin cambiar el diseño de Canvas. -->
+<theme>
+  <variables>
+    <systemName>Descargas</systemName>
+    <systemDescription>Descarga y gestiona juegos para tu X55.</systemDescription>
+    <systemManufacturer>Applications</systemManufacturer>
+    <systemReleaseYear>2026</systemReleaseYear>
+    <systemReleaseDate>2026</systemReleaseDate>
+    <systemReleaseDateFormated>2026</systemReleaseDateFormated>
+    <systemHardwareType>Application</systemHardwareType>
+    <systemCoverSize>1-1</systemCoverSize>
+    <systemCartSize>1-1</systemCartSize>
+  </variables>
+</theme>

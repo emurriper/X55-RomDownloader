@@ -1,0 +1,21 @@
+name: Pruebas
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - run: python -m unittest discover
+      - run: bash -n install.sh 'X55 ROM Downloader.sh'
+      - run: python build_release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: X55-RomDownloader
+          path: |
+            dist/release-v0.3/*.zip
+            dist/release-v0.3/*.sha256

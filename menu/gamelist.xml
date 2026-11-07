@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gameList>
+  <game>
+    <path>./X55 ROM Downloader.sh</path>
+    <name>X55 ROM Downloader</name>
+    <desc>Descarga y gestiona juegos para tu X55. Incluye búsqueda, extracción y actualización automática de EmulationStation.</desc>
+    <image>./logo.svg</image>
+  </game>
+</gameList>

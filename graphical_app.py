@@ -288,7 +288,7 @@ class Application:
         s.fill(0, 0, 1280, 112, (23, 33, 51))
         s.fill(40, 28, 6, 56, (64, 214, 170))
         s.text("X55 ROM Downloader", 64, 24, 36)
-        s.text("V0.3" + ("  ·  Vista previa" if self.read_only else ""), 65, 72, 21, (126, 211, 188))
+        s.text("V0.4" + ("  ·  Vista previa" if self.read_only else ""), 65, 72, 21, (126, 211, 188))
         s.fill(0, 650, 1280, 70, (23, 33, 51))
         if self.page == "list":
             self.draw_list()
@@ -437,6 +437,11 @@ class Application:
                 s.fill(48 + int(time.monotonic() * 180) % 960, 340, 224, 30, (64, 214, 170))
             text = size_text(downloaded) + ("  ·  Tamaño total desconocido" if status == "downloading" else "")
         s.text(text, 48, 390)
+        if status == 'downloading':
+            speed = state.get('speed', 0)
+            eta = state.get('eta')
+            remaining = f'  ·  Restan {int(eta)//60} min {int(eta)%60:02d} s' if eta is not None else ''
+            s.text(f"{size_text(speed)}/s  ·  {state.get('connections', 1)} conexiones{remaining}", 48, 450, 25)
         if status == "error":
             self.message(state["error"], 450)
         if status in ("done", "cancelled", "error"):
@@ -452,7 +457,7 @@ class Application:
     def run(self, max_seconds=None):
         self.screen = Screen()
         started = time.monotonic()
-        print("V0.3 LISTA: interfaz 1280x720 y controles activos", flush=True)
+        print("V0.4 LISTA: interfaz 1280x720 y controles activos", flush=True)
         try:
             while self.running:
                 if max_seconds is not None and time.monotonic() - started >= max_seconds:
@@ -470,4 +475,4 @@ class Application:
             if not self.read_only:
                 _, message = refresh_pending(self.root)
                 print(message, flush=True)
-            print("V0.3 CERRADA", flush=True)
+            print("V0.4 CERRADA", flush=True)

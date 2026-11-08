@@ -17,6 +17,8 @@ import ssl
 import urllib.parse
 import urllib.request
 import urllib.error
+import concurrent.futures
+import time
 from local_library import LocalLibrary
 from x55_systems import KEEP_ARCHIVES, CARTRIDGE_EXTENSIONS
 
@@ -295,17 +297,120 @@ def download_error(error):
 class Download(BackgroundTask):
     """Un trabajador escribe el temporal; la interfaz consulta una instantánea."""
 
+    PARALLEL_THRESHOLD = 32 * 1024 * 1024
+    MAX_CONNECTIONS = 4
+
     def __init__(self, url, destination, headers=None):
         self.url = url
         self.destination = Path(destination)
         self.headers = headers or {}
         super().__init__("connecting")
+        self.update(connections=1, speed=0, eta=None)
+        self._speed_at = time.monotonic()
+        self._speed_bytes = 0
+
+    def _progress(self, downloaded):
+        now = time.monotonic()
+        with self.lock:
+            self.state['downloaded'] = downloaded
+            elapsed = now - self._speed_at
+            if elapsed >= 0.5:
+                speed = max(0, downloaded - self._speed_bytes) / elapsed
+                self.state['speed'] = speed
+                total = self.state.get('total')
+                self.state['eta'] = max(0, total-downloaded) / speed if total and speed else None
+                self._speed_at, self._speed_bytes = now, downloaded
+
+    def _validate_prefix(self, chunk):
+        prefix = chunk.lstrip(b'\xef\xbb\xbf \t\r\n').lower()
+        if prefix.startswith((b'<!doctype html', b'<html', b'<head', b'<body')):
+            raise InvalidDownload('El enlace devuelve una página web, no una ROM. Actualiza la URL directa en catalog.json.')
+        signatures = {'.zip': (b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08'), '.7z': (b'7z\xbc\xaf\x27\x1c',)}
+        expected = signatures.get(self.destination.suffix.lower())
+        if expected and not chunk.startswith(expected):
+            raise InvalidDownload('El servidor no devolvió un archivo comprimido válido. Vuelve a seleccionar el juego para renovar el enlace.')
+
+    def _parallel(self, temporary, total, etag):
+        """Cada conexión escribe un rango disjunto; se publica solo si todos terminan."""
+        stop = threading.Event()
+        counts = [0] * self.MAX_CONNECTIONS
+        progress_lock = threading.Lock()
+        with open(temporary, 'wb') as output:
+            output.truncate(total)
+        self.update(downloaded=0, connections=self.MAX_CONNECTIONS)
+
+        def worker(index):
+            start = total * index // self.MAX_CONNECTIONS
+            end = total * (index+1) // self.MAX_CONNECTIONS - 1
+            request_headers = {**self.headers, 'User-Agent': 'X55-ROM-Downloader/0.4',
+                               'Accept-Encoding': 'identity', 'Range': f'bytes={start}-{end}'}
+            if etag and not etag.startswith('W/'):
+                request_headers['If-Range'] = etag
+            try:
+                request = urllib.request.Request(self.url, headers=request_headers)
+                with urllib.request.urlopen(request, timeout=10) as response:
+                    if (response.status != 206 or response.headers.get('Content-Range') != f'bytes {start}-{end}/{total}'
+                            or response.headers.get('Content-Encoding', 'identity').lower() != 'identity'):
+                        raise InvalidDownload('El servidor no admite los rangos solicitados.')
+                    if etag and not etag.startswith('W/') and response.headers.get('ETag') != etag:
+                        raise InvalidDownload('El archivo cambió durante la descarga.')
+                    expected = end-start+1
+                    with open(temporary, 'r+b') as output:
+                        output.seek(start)
+                        while counts[index] < expected and not stop.is_set() and not self.cancel.is_set():
+                            chunk = response.read(min(64*1024, expected-counts[index]))
+                            if not chunk:
+                                raise InvalidDownload('Un segmento de la descarga quedó incompleto.')
+                            if start == 0 and counts[index] == 0:
+                                self._validate_prefix(chunk)
+                            output.write(chunk)
+                            with progress_lock:
+                                counts[index] += len(chunk)
+                                self._progress(sum(counts))
+                        if not stop.is_set() and not self.cancel.is_set() and response.read(1):
+                            raise InvalidDownload('El servidor excedió el rango solicitado.')
+            except urllib.error.HTTPError as error:
+                stop.set()
+                error.close()
+                raise
+            except Exception:
+                stop.set()
+                raise
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.MAX_CONNECTIONS) as pool:
+            futures = [pool.submit(worker, index) for index in range(self.MAX_CONNECTIONS)]
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
+        if not self.cancel.is_set() and sum(counts) != total:
+            raise InvalidDownload('La descarga por segmentos quedó incompleta.')
+
+    def _transfer(self, output, response, total):
+        self.update(connections=1, downloaded=0, speed=0, eta=None)
+        self._speed_at, self._speed_bytes = time.monotonic(), 0
+        downloaded = 0
+        while not self.cancel.is_set():
+            chunk = response.read(64 * 1024)
+            if not chunk:
+                break
+            if downloaded == 0:
+                self._validate_prefix(chunk)
+            output.write(chunk)
+            downloaded += len(chunk)
+            if total is not None and downloaded > total:
+                raise InvalidDownload('El servidor excedió el tamaño anunciado.')
+            self._progress(downloaded)
+        if not self.cancel.is_set():
+            if total is not None and downloaded != total:
+                raise InvalidDownload('La descarga terminó con un tamaño incompleto. Vuelve a intentarlo.')
+            if not downloaded:
+                raise InvalidDownload('El servidor devolvió un archivo vacío. Comprueba el enlace de descarga.')
 
     def _run(self):
         temporary = None
         try:
             self.destination.parent.mkdir(parents=True, exist_ok=True)
-            request = urllib.request.Request(self.url, headers={"User-Agent": "X55-ROM-Downloader/0.3", **self.headers})
+            request = urllib.request.Request(self.url, headers={"User-Agent": "X55-ROM-Downloader/0.4", **self.headers,
+                                                               'Accept-Encoding': 'identity'})
             with urllib.request.urlopen(request, timeout=10) as response:
                 content_type = response.headers.get_content_type()
                 if content_type in ('text/html', 'application/xhtml+xml'):
@@ -313,32 +418,36 @@ class Download(BackgroundTask):
                 length = response.headers.get("Content-Length")
                 total = int(length) if length and length.isdigit() else None
                 self.update(status="downloading", total=total)
-                downloaded = 0
                 with tempfile.NamedTemporaryFile(dir=self.destination.parent,
                                                  prefix=".x55-", suffix=".part", delete=False) as output:
                     temporary = output.name
-                    while not self.cancel.is_set():
-                        chunk = response.read(64 * 1024)
-                        if not chunk:
-                            break
-                        if downloaded == 0:
-                            prefix = chunk.lstrip(b'\xef\xbb\xbf \t\r\n').lower()
-                            if prefix.startswith((b'<!doctype html', b'<html', b'<head', b'<body')):
-                                raise InvalidDownload('El enlace devuelve una página web, no una ROM. Actualiza la URL directa en catalog.json.')
-                            if self.destination.suffix.lower() == '.zip' and not chunk.startswith((b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08')):
-                                raise InvalidDownload('El servidor no devolvió un archivo ZIP. El enlace puede haber caducado; actualiza catalog.json.')
-                            if self.destination.suffix.lower() == '.7z' and not chunk.startswith(b'7z\xbc\xaf\x27\x1c'):
-                                raise InvalidDownload('El servidor no devolvió un archivo 7z válido. Vuelve a seleccionar el juego para renovar el enlace.')
-                        output.write(chunk)
-                        downloaded += len(chunk)
-                        self.update(downloaded=downloaded)
+                    use_parallel = (total is not None and total >= self.PARALLEL_THRESHOLD
+                                    and response.headers.get('Accept-Ranges', '').lower() == 'bytes'
+                                    and response.headers.get('Content-Encoding', 'identity').lower() == 'identity'
+                                    and not self.cancel.is_set())
+                    if not use_parallel:
+                        self._transfer(output, response, total)
+                    else:
+                        self._validate_prefix(response.read(64 * 1024))
+                        etag = response.headers.get('ETag')
+                        response.close()
+                        output.close()
+                        try:
+                            self._parallel(temporary, total, etag)
+                        except Exception:
+                            if not self.cancel.is_set():
+                                # Todos los trabajadores ya están cerrados antes de sobrescribir.
+                                with urllib.request.urlopen(request, timeout=10) as retry:
+                                    if retry.headers.get_content_type() in ('text/html', 'application/xhtml+xml'):
+                                        raise InvalidDownload('El servidor devolvió una página web en vez del archivo.')
+                                    retry_length = retry.headers.get('Content-Length')
+                                    retry_total = int(retry_length) if retry_length and retry_length.isdigit() else None
+                                    self.update(total=retry_total)
+                                    with open(temporary, 'wb') as sequential:
+                                        self._transfer(sequential, retry, retry_total)
                 if self.cancel.is_set():
                     self.update(status="cancelled")
                     return
-                if total is not None and downloaded != total:
-                    raise InvalidDownload("La descarga terminó con un tamaño incompleto. Vuelve a intentarlo.")
-                if downloaded == 0:
-                    raise InvalidDownload('El servidor devolvió un archivo vacío. Comprueba el enlace de descarga.')
             os.replace(temporary, self.destination)
             temporary = None
             self.update(status="done")

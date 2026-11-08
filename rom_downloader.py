@@ -5,7 +5,7 @@ import time
 from download_core import Download, ResolveGame, read_catalog, destination_for
 
 APP_NAME = "X55 ROM Downloader"
-VERSION = "0.3"
+VERSION = "0.4"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CATALOG_FILE = os.path.join(BASE_DIR, "catalog.json")

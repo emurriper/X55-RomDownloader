@@ -133,7 +133,7 @@ def install(payload):
                 raise ValueError('Ruta de metadatos de Canvas inesperada.')
             write_file(canvas_metadata, payload['menu']['canvas-metadata.xml'])
         write_file(config, payload['menu']['es_systems_x55_downloader.cfg'])
-        manifest = {'version':'0.3', 'files':{name:hashlib.sha256(text.encode('utf-8')).hexdigest() for name,text in files.items()}}
+        manifest = {'version':'0.4', 'files':{name:hashlib.sha256(text.encode('utf-8')).hexdigest() for name,text in files.items()}}
         write_file(marker, json.dumps(manifest, indent=2) + '\n')
         for name, expected_hash in manifest['files'].items():
             if hashlib.sha256((app / name).read_bytes()).hexdigest() != expected_hash:

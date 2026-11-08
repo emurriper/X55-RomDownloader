@@ -13,8 +13,10 @@ jobs:
         with:
           python-version: '3.14'
       - run: python -m unittest discover
+      - name: Comprobar version del tag
+        run: python -c "import os; from build_release import VERSION; assert os.environ['GITHUB_REF_NAME'] == 'v' + VERSION"
       - run: python build_release.py
       - name: Publicar ZIP y suma SHA256
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/release-v0.3/*.zip dist/release-v0.3/*.sha256 --title "X55 ROM Downloader $GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/release-v*/*.zip dist/release-v*/*.sha256 --title "X55 ROM Downloader $GITHUB_REF_NAME" --generate-notes

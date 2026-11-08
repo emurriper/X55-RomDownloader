@@ -10,7 +10,7 @@ from download_core import component
 
 
 def headers(page_url, json_response=False):
-    result = {'User-Agent': 'X55-ROM-Downloader/0.3', 'Origin': 'https://www.romsgames.net',
+    result = {'User-Agent': 'X55-ROM-Downloader/0.4', 'Origin': 'https://www.romsgames.net',
               'Referer': page_url}
     if json_response:
         result.update({'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest',

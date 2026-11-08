@@ -10,7 +10,7 @@ from build_catalog import build
 from install_x55 import RUNTIME_FILES, MENU_FILES
 from x55_systems import SELECTED
 
-VERSION = '0.3'
+VERSION = '0.4'
 EXTRA_FILES = ('install_x55.py', 'install.sh', 'Install-X55.ps1', 'Start-X55.ps1',
                'X55 ROM Downloader.sh', 'build_catalog.py', 'sync_x55_catalog.py',
                'build_release.py', '.gitignore', '.gitattributes',
@@ -36,7 +36,8 @@ def prepare(source, output):
                           '[Parameter(Mandatory=$true)][string]$X55Address', text, count=1)
         files[name] = text.encode('utf-8')
     readme = source / 'README.github.md'
-    files['README.md'] = (readme if readme.exists() else source / 'README.md').read_bytes()
+    files['README.md'] = (readme if readme.exists() else source / 'README.md').read_text(
+        encoding='utf-8-sig').replace('\r\n', '\n').encode('utf-8')
     # Permite reconstruir el paquete desde el propio ZIP publicado.
     files['README.github.md'] = files['README.md']
     for name, value in (('catalog.json', catalog), ('site_index.json', public_index)):

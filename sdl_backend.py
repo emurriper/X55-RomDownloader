@@ -54,7 +54,7 @@ class Screen:
             self._bind(self.t, name, signature)
         try:
             self._check(self.SDL_Init(0x20 | 0x2000 | 0x4000))
-            self.window = self.SDL_CreateWindow(b"X55 ROM Downloader v0.3", 0x2FFF0000,
+            self.window = self.SDL_CreateWindow(b"X55 ROM Downloader v0.4", 0x2FFF0000,
                                                 0x2FFF0000, 1280, 720, 0x1001)
             if not self.window:
                 raise RuntimeError(self.error())

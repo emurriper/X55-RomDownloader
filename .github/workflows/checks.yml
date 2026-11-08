@@ -17,5 +17,5 @@ jobs:
         with:
           name: X55-RomDownloader
           path: |
-            dist/release-v0.3/*.zip
-            dist/release-v0.3/*.sha256
+            dist/release-v*/*.zip
+            dist/release-v*/*.sha256

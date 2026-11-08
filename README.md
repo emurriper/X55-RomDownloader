@@ -10,6 +10,12 @@ del sitio de origen. Usa únicamente contenido que tengas autorización para des
 
 ## Requisitos
 
+Los archivos de 32 MiB o más pueden usar cuatro conexiones si el servidor admite
+rangos HTTP. Si un segmento falla o el servidor ignora los rangos, la aplicación
+reinicia el temporal con una sola conexión. La pantalla muestra velocidad y tiempo
+restante estimado. La mejora depende de la red y del servidor. Cancelar retira el
+temporal; no se reanudan descargas entre sesiones.
+
 - Powkiddy X55 con ROCKNIX ARM64. Probado con Python 3.14.7.
 - Python 3.10 o posterior, SDL2 y SDL2_ttf disponibles en el sistema.
 - `7za` para extraer 7z; ZIP se procesa con Python.
@@ -20,7 +26,7 @@ Otras versiones de ROCKNIX y otros dispositivos requieren validación adicional.
 
 ## Instalación desde la consola
 
-1. Descarga `X55-RomDownloader-v0.3.zip` desde **Releases** y descomprímelo.
+1. Descarga `X55-RomDownloader-v0.4.zip` desde **Releases** y descomprímelo.
    También puedes usar **Code → Download ZIP**.
 2. Copia la carpeta descomprimida a la tarjeta de ROMs, por ejemplo
    `/storage/roms/tools/X55-RomDownloader`. La carpeta debe contener `install.sh`.

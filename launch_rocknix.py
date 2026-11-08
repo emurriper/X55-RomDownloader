@@ -57,7 +57,7 @@ def main():
                     os.environ.update(graphical_environment())
                     os.environ['SDL_VIDEODRIVER'] = 'wayland'
                     os.environ['SDL_GAMECONTROLLERCONFIG_FILE'] = '/storage/.config/SDL-GameControllerDB/gamecontrollerdb.txt'
-                    print('Inicio desde Descargas · X55 ROM Downloader V0.4', flush=True)
+                    print('Inicio desde Descargas · X55 ROM Downloader V0.5', flush=True)
                     print('Wayland:', os.environ['WAYLAND_DISPLAY'], flush=True)
                     from rom_downloader import main as app_main
                     sys.argv = [str(app_dir / 'rom_downloader.py'), '--gui', '--roms-dir', '/storage/roms', *sys.argv[1:]]

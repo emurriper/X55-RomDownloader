@@ -7,6 +7,7 @@ from download_core import Download, ExtractZip, ResolveGame, destination_for, lo
 from sdl_backend import Screen
 from emulationstation_refresh import is_pending, mark_pending, refresh_pending
 from local_library import LocalLibrary
+from cover_art import CoverCache
 
 
 def folded(text):
@@ -48,6 +49,7 @@ class Application:
         self.refresh_notice = ''
         self.last_library_job = None
         self.local_library = LocalLibrary(root)
+        self.covers = None
 
     def library_updated(self):
         if self.read_only or self.last_library_job is self.job:
@@ -283,12 +285,14 @@ class Application:
             self.page = "zip_choice"
 
     def draw(self):
+        if self.covers and (self.page != 'list' or self.system is None):
+            self.covers.pause()
         s = self.screen
         s.clear()
         s.fill(0, 0, 1280, 112, (23, 33, 51))
         s.fill(40, 28, 6, 56, (64, 214, 170))
         s.text("X55 ROM Downloader", 64, 24, 36)
-        s.text("V0.4" + ("  ·  Vista previa" if self.read_only else ""), 65, 72, 21, (126, 211, 188))
+        s.text("V0.5" + ("  ·  Vista previa" if self.read_only else ""), 65, 72, 21, (126, 211, 188))
         s.fill(0, 650, 1280, 70, (23, 33, 51))
         if self.page == "list":
             self.draw_list()
@@ -374,11 +378,12 @@ class Application:
         if not items:
             s.text("No hay coincidencias." if self.query else "No hay juegos disponibles.", 64, 280, 30)
         first = self.index // 8 * 8
+        show_cover = self.system is not None
         for row, item in enumerate(items[first:first + 8]):
             selected = first + row == self.index
             y = 222 + row * 50
             if selected:
-                s.fill(40, y - 2, 1200, 47, (38, 91, 87))
+                s.fill(40, y - 2, 804 if show_cover else 1200, 47, (38, 91, 87))
                 s.fill(40, y - 2, 5, 47, (64, 214, 170))
             if self.system is None:
                 label = f"{item}"
@@ -392,8 +397,20 @@ class Application:
                           'available': ('Disponible', (147, 166, 192)),
                           'error': ('Revisar ruta', (255, 150, 150))}
                 badge, color = labels[state]
-                s.text(badge, 1010, y + 6, 23, color, 215)
-            s.text(label, 64, y + 3, 28, max_width=910)
+                s.text(badge, 650, y + 6, 23, color, 180)
+            s.text(label, 64, y + 3, 28, max_width=565 if show_cover else 910)
+        if show_cover:
+            s.fill(872, 220, 368, 406, (23, 33, 51))
+            s.text('Vista del juego', 898, 238, 24, (126, 211, 188), 320)
+            if items:
+                if self.covers is None:
+                    self.covers = CoverCache(self.root)
+                path, message = self.covers.select(items[self.index], self.catalog[self.system]['folder'])
+                if path is not None:
+                    if not s.image(path, 896, 280, 320, 326):
+                        message = 'No se pudo mostrar la imagen'
+                if message:
+                    s.text(message, 892, 418, 19, (147, 166, 192), 330)
         if items:
             s.text(f"{self.index + 1}/{len(items)}", 1100, 143, 23)
         footer = "A Seleccionar   B Volver   X Buscar   Start Salir" if self.system else "Cruceta / analógico Navegar   A Abrir   B / Start Salir"
@@ -457,7 +474,7 @@ class Application:
     def run(self, max_seconds=None):
         self.screen = Screen()
         started = time.monotonic()
-        print("V0.4 LISTA: interfaz 1280x720 y controles activos", flush=True)
+        print("V0.5 LISTA: interfaz 1280x720 y controles activos", flush=True)
         try:
             while self.running:
                 if max_seconds is not None and time.monotonic() - started >= max_seconds:
@@ -468,6 +485,8 @@ class Application:
                 self.draw()
                 time.sleep(0.016)
         finally:
+            if self.covers:
+                self.covers.close()
             if self.job and self.job.thread.is_alive():
                 self.job.cancel.set()
                 self.job.thread.join(timeout=12)
@@ -475,4 +494,4 @@ class Application:
             if not self.read_only:
                 _, message = refresh_pending(self.root)
                 print(message, flush=True)
-            print("V0.4 CERRADA", flush=True)
+            print("V0.5 CERRADA", flush=True)

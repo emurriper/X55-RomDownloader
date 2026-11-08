@@ -342,7 +342,7 @@ class Download(BackgroundTask):
         def worker(index):
             start = total * index // self.MAX_CONNECTIONS
             end = total * (index+1) // self.MAX_CONNECTIONS - 1
-            request_headers = {**self.headers, 'User-Agent': 'X55-ROM-Downloader/0.4',
+            request_headers = {**self.headers, 'User-Agent': 'X55-ROM-Downloader/0.5',
                                'Accept-Encoding': 'identity', 'Range': f'bytes={start}-{end}'}
             if etag and not etag.startswith('W/'):
                 request_headers['If-Range'] = etag
@@ -409,7 +409,7 @@ class Download(BackgroundTask):
         temporary = None
         try:
             self.destination.parent.mkdir(parents=True, exist_ok=True)
-            request = urllib.request.Request(self.url, headers={"User-Agent": "X55-ROM-Downloader/0.4", **self.headers,
+            request = urllib.request.Request(self.url, headers={"User-Agent": "X55-ROM-Downloader/0.5", **self.headers,
                                                                'Accept-Encoding': 'identity'})
             with urllib.request.urlopen(request, timeout=10) as response:
                 content_type = response.headers.get_content_type()

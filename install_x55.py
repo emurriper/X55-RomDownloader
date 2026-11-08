@@ -12,7 +12,7 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
-RUNTIME_FILES = ('rom_downloader.py', 'download_core.py', 'graphical_app.py',
+RUNTIME_FILES = ('rom_downloader.py', 'download_core.py', 'graphical_app.py', 'cover_art.py',
                  'sdl_backend.py', 'launch_rocknix.py', 'archive_support.py',
                  'romsgames_source.py', 'import_site.py', 'emulationstation_refresh.py',
                  'local_library.py', 'x55_systems.py', 'catalog.json')
@@ -133,7 +133,7 @@ def install(payload):
                 raise ValueError('Ruta de metadatos de Canvas inesperada.')
             write_file(canvas_metadata, payload['menu']['canvas-metadata.xml'])
         write_file(config, payload['menu']['es_systems_x55_downloader.cfg'])
-        manifest = {'version':'0.4', 'files':{name:hashlib.sha256(text.encode('utf-8')).hexdigest() for name,text in files.items()}}
+        manifest = {'version':'0.5', 'files':{name:hashlib.sha256(text.encode('utf-8')).hexdigest() for name,text in files.items()}}
         write_file(marker, json.dumps(manifest, indent=2) + '\n')
         for name, expected_hash in manifest['files'].items():
             if hashlib.sha256((app / name).read_bytes()).hexdigest() != expected_hash:

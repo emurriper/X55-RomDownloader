@@ -23,6 +23,9 @@ class Screen:
         self.window = self.renderer = None
         self.fonts = {}
         self.textures = OrderedDict()
+        self.images = OrderedDict()
+        self.image_library = None
+        self.bad_images = set()
         self.controllers = {}
         self.held = {}
         self.next_repeat = {}
@@ -54,7 +57,7 @@ class Screen:
             self._bind(self.t, name, signature)
         try:
             self._check(self.SDL_Init(0x20 | 0x2000 | 0x4000))
-            self.window = self.SDL_CreateWindow(b"X55 ROM Downloader v0.4", 0x2FFF0000,
+            self.window = self.SDL_CreateWindow(b"X55 ROM Downloader v0.5", 0x2FFF0000,
                                                 0x2FFF0000, 1280, 720, 0x1001)
             if not self.window:
                 raise RuntimeError(self.error())
@@ -137,6 +140,39 @@ class Screen:
         self.SDL_RenderCopy(self.renderer, texture, C.byref(Rect(0, 0, width, height)),
                             C.byref(Rect(x, y, width, height)))
 
+    def image(self, path, x, y, width, height):
+        key = os.fspath(path)
+        if key in self.bad_images:
+            return False
+        if key not in self.images:
+            try:
+                if self.image_library is None:
+                    self.image_library = C.CDLL('libSDL2_image-2.0.so.0')
+                    self._bind(self.image_library, 'IMG_LoadTexture', (C.c_void_p, C.c_void_p, C.c_char_p))
+                texture = self.IMG_LoadTexture(self.renderer, os.fsencode(path))
+                if not texture:
+                    raise RuntimeError(self.error())
+                w, h = C.c_int(), C.c_int()
+                if self.SDL_QueryTexture(texture, None, None, C.byref(w), C.byref(h)) < 0 or w.value <= 0 or h.value <= 0:
+                    self.SDL_DestroyTexture(texture)
+                    raise RuntimeError('Miniatura no valida')
+                self.images[key] = texture, w.value, h.value
+                if len(self.images) > 4:
+                    _, (old, _, _) = self.images.popitem(last=False)
+                    self.SDL_DestroyTexture(old)
+            except (OSError, RuntimeError):
+                if len(self.bad_images) >= 8:
+                    self.bad_images.clear()
+                self.bad_images.add(key)
+                return False
+        self.images.move_to_end(key)
+        texture, w, h = self.images[key]
+        scale = min(width/w, height/h, 1)
+        target_w, target_h = max(1, int(w*scale)), max(1, int(h*scale))
+        rect = Rect(x+(width-target_w)//2, y+(height-target_h)//2, target_w, target_h)
+        self.SDL_RenderCopy(self.renderer, texture, None, C.byref(rect))
+        return True
+
     def actions(self):
         actions = []
         event = Event()
@@ -200,6 +236,9 @@ class Screen:
         self.SDL_RenderPresent(self.renderer)
 
     def close(self):
+        for texture, _, _ in self.images.values():
+            self.SDL_DestroyTexture(texture)
+        self.images.clear()
         for handle in self.controllers.values():
             self.SDL_GameControllerClose(handle)
         self.controllers.clear()

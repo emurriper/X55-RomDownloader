@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $files = @{}
-foreach ($name in @('rom_downloader.py', 'download_core.py', 'graphical_app.py', 'sdl_backend.py', 'launch_rocknix.py', 'archive_support.py', 'romsgames_source.py', 'import_site.py', 'emulationstation_refresh.py', 'local_library.py', 'x55_systems.py')) {
+foreach ($name in @('rom_downloader.py', 'download_core.py', 'graphical_app.py', 'cover_art.py', 'sdl_backend.py', 'launch_rocknix.py', 'archive_support.py', 'romsgames_source.py', 'import_site.py', 'emulationstation_refresh.py', 'local_library.py', 'x55_systems.py')) {
     $files[$name] = ([string](Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot $name))).Replace("`r`n", "`n")
 }
 $files['catalog.json'] = [string](Get-Content -Raw -Encoding UTF8 -LiteralPath $CatalogFile)

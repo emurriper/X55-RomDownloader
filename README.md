@@ -10,6 +10,15 @@ del sitio de origen. Usa únicamente contenido que tengas autorización para des
 
 ## Requisitos
 
+Miniaturas disponibles en todos los sistemas: muestran la imagen del juego seleccionado,
+reutiliza las imágenes locales cuando existen y guarda versiones reducidas en
+`/storage/roms/.x55-cover-cache/<sistema>`. La caché global ocupa como máximo 100 MiB y se
+mantienen hasta cuatro texturas en RAM. La carga se realiza en segundo plano.
+Para esta función se utilizan SDL2_image e ImageMagick si están disponibles;
+si faltan o no hay imagen disponible, la navegación sigue funcionando sin miniatura.
+Las imágenes se reducen a un máximo de 320 × 340 píxeles y se consultan solo al
+seleccionar un juego, con una pausa breve para evitar peticiones al navegar rápido.
+
 Los archivos de 32 MiB o más pueden usar cuatro conexiones si el servidor admite
 rangos HTTP. Si un segmento falla o el servidor ignora los rangos, la aplicación
 reinicia el temporal con una sola conexión. La pantalla muestra velocidad y tiempo
@@ -26,7 +35,7 @@ Otras versiones de ROCKNIX y otros dispositivos requieren validación adicional.
 
 ## Instalación desde la consola
 
-1. Descarga `X55-RomDownloader-v0.4.zip` desde **Releases** y descomprímelo.
+1. Descarga `X55-RomDownloader-v0.5.zip` desde **Releases** y descomprímelo.
    También puedes usar **Code → Download ZIP**.
 2. Copia la carpeta descomprimida a la tarjeta de ROMs, por ejemplo
    `/storage/roms/tools/X55-RomDownloader`. La carpeta debe contener `install.sh`.

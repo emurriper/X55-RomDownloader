@@ -10,7 +10,7 @@ from build_catalog import build
 from install_x55 import RUNTIME_FILES, MENU_FILES
 from x55_systems import SELECTED
 
-VERSION = '0.4'
+VERSION = '0.5'
 EXTRA_FILES = ('install_x55.py', 'install.sh', 'Install-X55.ps1', 'Start-X55.ps1',
                'X55 ROM Downloader.sh', 'build_catalog.py', 'sync_x55_catalog.py',
                'build_release.py', '.gitignore', '.gitattributes',

@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = 'Stop'
 # Todo el código viaja por la entrada estándar; no se instala en la consola.
 $bundle = @{}
-foreach ($name in @('x55_systems', 'local_library', 'download_core', 'import_site', 'romsgames_source', 'archive_support', 'sdl_backend', 'emulationstation_refresh', 'graphical_app')) {
+foreach ($name in @('x55_systems', 'local_library', 'download_core', 'import_site', 'romsgames_source', 'archive_support', 'sdl_backend', 'emulationstation_refresh', 'cover_art', 'graphical_app')) {
     $bundle[$name] = [string](Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot "$name.py"))
 }
 $bundle['catalog'] = [string](Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot 'catalog.json'))
@@ -26,7 +26,7 @@ os.environ['XDG_RUNTIME_DIR'] = bundle['runtime']
 os.environ['WAYLAND_DISPLAY'] = bundle['wayland']
 os.environ['SDL_VIDEODRIVER'] = 'wayland'
 os.environ['SDL_GAMECONTROLLERCONFIG_FILE'] = '/storage/.config/SDL-GameControllerDB/gamecontrollerdb.txt'
-for name in ('x55_systems', 'local_library', 'download_core', 'import_site', 'romsgames_source', 'archive_support', 'sdl_backend', 'emulationstation_refresh', 'graphical_app'):
+for name in ('x55_systems', 'local_library', 'download_core', 'import_site', 'romsgames_source', 'archive_support', 'sdl_backend', 'emulationstation_refresh', 'cover_art', 'graphical_app'):
     module = types.ModuleType(name)
     module.__file__ = '/storage/x55-in-memory/' + name + '.py'
     sys.modules[name] = module
